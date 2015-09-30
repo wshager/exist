@@ -409,7 +409,7 @@
         - suppress-whitespace-mixed-content:
             preserve the white space inside a mixed content node
     -->
-    <indexer caseSensitive="yes" index-depth="5" preserve-whitespace-mixed-content="no"
+    <indexer caseSensitive="yes" index-depth="5" preserve-whitespace-mixed-content="yes"
         suppress-whitespace="none">
 
         <modules>
@@ -651,8 +651,10 @@
         and "string".  Anything else will be treated as type "string".
         
     -->
-    <transformer class="net.sf.saxon.TransformerFactoryImpl" caching="yes">
+    <transformer class="com.saxonica.config.ProfessionalTransformerFactory" caching="no">
         <attribute name="http://saxon.sf.net/feature/version-warning" value="false" type="boolean"/>
+        <attribute name="http://saxon.sf.net/feature/licenseFileLocation" value="/usr/local/exist/lib/user/saxon-license.lic" type="string"/>
+        <attribute name="http://saxon.sf.net/feature/configuration-file" value="/usr/local/exist/lib/user/saxon-config.xml" type="string"/>
     </transformer>
 
     <!--
