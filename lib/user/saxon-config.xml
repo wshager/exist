@@ -1,0 +1,7 @@
+<configuration xmlns="http://saxon.sf.net/ns/configuration"
+	edition="PE">
+	<xslt version="2.1" versionWarning="false">
+		<extensionElement namespace="http://saxon.sf.net/sql"
+			factory="net.sf.saxon.option.sql.SQLElementFactory" />
+	</xslt>
+</configuration>
