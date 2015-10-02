@@ -317,47 +317,20 @@ public class Indexer extends Observable implements ContentHandler, LexicalHandle
 
     private void processText(ElementImpl last) {
         //keep for reference until sure that it's not required
-//        if (charBuf != null && charBuf.length() > 0) {
-//            // remove whitespace if the node has just a single text child,
-//            // keep whitespace for mixed content.
-//            final XMLString normalized;
-//            if ((charBuf.isWhitespaceOnly() && suppressWSmixed) || last.preserveSpace()) {
-//                normalized = charBuf;
-//            } else {
-//                if (last.getChildCount() == 0) {
-//                    normalized = charBuf.normalize(normalize);
-//                } else {
-//                    normalized = charBuf.isWhitespaceOnly() ? null : charBuf;
-//                }
-//            }
-//            if (normalized != null && normalized.length() > 0) {
-//                text.setData(normalized);
-//                text.setOwnerDocument(document);
-//                last.appendChildInternal(prevNode, text);
-//                if (!validate) storeText();
-//                setPrevious(text);
-//            }
-//            charBuf.reset();
-//        }
-
-        //from startElement method
         if (charBuf != null && charBuf.length() > 0) {
-            XMLString normalized = null;
-            if (charBuf.isWhitespaceOnly()) {
-                if (last.preserveSpace()) {
-                    normalized = charBuf;
-                } else if (suppressWSmixed) {
-                    if (!(last.getChildCount() == 0 && (normalize & XMLString.SUPPRESS_LEADING_WS) != 0)) {
-                        normalized = charBuf;
-                    }
-                }
-            } else {
-                // mixed element content: don't normalize the text node,
-                // just check if there is any text at all
+            // remove whitespace if the node has just a single text child,
+            // keep whitespace for mixed content.
+            final XMLString normalized;
+            if ((charBuf.isWhitespaceOnly() && suppressWSmixed) || last.preserveSpace()) {
                 normalized = charBuf;
+            } else {
+                if (last.getChildCount() == 0) {
+                    normalized = charBuf.normalize(normalize);
+                } else {
+                    normalized = charBuf.isWhitespaceOnly() ? null : charBuf;
+                }
             }
-
-            if (normalized != null) {
+            if (normalized != null && normalized.length() > 0) {
                 text.setData(normalized);
                 text.setOwnerDocument(document);
                 last.appendChildInternal(prevNode, text);
@@ -366,6 +339,33 @@ public class Indexer extends Observable implements ContentHandler, LexicalHandle
             }
             charBuf.reset();
         }
+
+        //from startElement method
+//        if (charBuf != null && charBuf.length() > 0) {
+//            XMLString normalized = null;
+//            if (charBuf.isWhitespaceOnly()) {
+//                if (last.preserveSpace()) {
+//                    normalized = charBuf;
+//                } else if (suppressWSmixed) {
+//                    if (!(last.getChildCount() == 0 && (normalize & XMLString.SUPPRESS_LEADING_WS) != 0)) {
+//                        normalized = charBuf;
+//                    }
+//                }
+//            } else {
+//                // mixed element content: don't normalize the text node,
+//                // just check if there is any text at all
+//                normalized = charBuf;
+//            }
+//
+//            if (normalized != null) {
+//                text.setData(normalized);
+//                text.setOwnerDocument(document);
+//                last.appendChildInternal(prevNode, text);
+//                if (!validate) storeText();
+//                setPrevious(text);
+//            }
+//            charBuf.reset();
+//        }
     }
 
     public void endElement(String namespace, String name, String qname) {
