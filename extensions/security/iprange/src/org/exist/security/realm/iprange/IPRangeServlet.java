@@ -90,13 +90,17 @@ public class IPRangeServlet extends HttpServlet {
     	try {
     		SecurityManager secman = IPRangeRealm.instance.getSecurityManager();
     		Subject user = secman.authenticate(ip,ip);
-    		final HttpSession session = request.getSession();
-    		// store the user in the session
-    		if (session != null) {
-    			LOG.info("IPRangeServlet setting session attr "+ XQueryContext.HTTP_SESSIONVAR_XMLDB_USER);
-    			session.setAttribute(XQueryContext.HTTP_SESSIONVAR_XMLDB_USER, user);
+    		if(user != null) {
+	    		final HttpSession session = request.getSession();
+	    		// store the user in the session
+	    		if (session != null) {
+	    			LOG.info("IPRangeServlet setting session attr "+ XQueryContext.HTTP_SESSIONVAR_XMLDB_USER);
+	    			session.setAttribute(XQueryContext.HTTP_SESSIONVAR_XMLDB_USER, user);
+	    		} else {
+	    			LOG.info("IPRangeServlet session is null");
+	    		}
     		} else {
-    			LOG.info("IPRangeServlet session is null");
+    			LOG.info("IPRangeServlet user not found");
     		}
     	} catch(AuthenticationException e){
     		throw new IOException(e.getMessage());
