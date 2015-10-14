@@ -87,14 +87,17 @@ public class IPRangeServlet extends HttpServlet {
     	
     	LOG.info("GOT IPRangeServlet "+ip);
     	
+    	String json = "\"fail\"";
+    	
     	try {
     		SecurityManager secman = IPRangeRealm.instance.getSecurityManager();
     		Subject user = secman.authenticate(ip,ip);
-    		LOG.info("IPRangeServlet user " +user+ " found");
+    		LOG.info("IPRangeServlet user " +user.getUsername()+ " found");
     		if(user != null) {
 	    		final HttpSession session = request.getSession();
 	    		// store the user in the session
 	    		if (session != null) {
+	    			json = "{\"user\":\""+user.getUsername()+"\"}";
 	    			LOG.info("IPRangeServlet setting session attr "+ XQueryContext.HTTP_SESSIONVAR_XMLDB_USER);
 	    			session.setAttribute(XQueryContext.HTTP_SESSIONVAR_XMLDB_USER, user);
 	    		} else {
@@ -105,6 +108,11 @@ public class IPRangeServlet extends HttpServlet {
     		}
     	} catch(AuthenticationException e){
     		throw new IOException(e.getMessage());
+    	} finally {
+    		response.setContentType("application/json");
+    		PrintWriter out = response.getWriter();
+    		out.print(json);
+    		out.flush();
     	}
 	}
 
