@@ -91,7 +91,7 @@ public class IPRangeServlet extends HttpServlet {
     		SecurityManager secman = IPRangeRealm.instance.getSecurityManager();
     		Subject user = secman.authenticate(ip,ip);
     		LOG.info("IPRangeServlet user " +user+ " found");
-    		if(user != "") {
+    		if(user != null) {
 	    		final HttpSession session = request.getSession();
 	    		// store the user in the session
 	    		if (session != null) {

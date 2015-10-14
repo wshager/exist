@@ -150,13 +150,14 @@ public class IPRangeRealm extends AbstractRealm {
 				account = getSecurityManager().getAccount(username);
 				if(account != null){
 					LOG.info("IPRangeRealm trying "+account.getName());
+					return new SubjectAccreditedImpl((AbstractAccount) account,ip);
 				} else {
 					LOG.info("IPRangeRealm couldn't resolve account for "+username);
 				}
 			} else {
 				LOG.info("IPRangeRealm xquery found no matches");
 			}
-	        return new SubjectAccreditedImpl((AbstractAccount) account,ip);
+	        return null;
 		} catch (EXistException e) {
 			throw new AuthenticationException(AuthenticationException.UNNOWN_EXCEPTION, e.getMessage());
 		} catch (PermissionDeniedException e) {
