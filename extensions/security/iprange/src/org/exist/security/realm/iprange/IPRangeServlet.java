@@ -22,6 +22,7 @@
 package org.exist.security.realm.iprange;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -52,9 +53,9 @@ import org.exist.xquery.util.HTTPUtils;
 import org.exist.security.AuthenticationException;
 
 /**
- * OpenId authenticator servlet.
+ * IPRange authenticator servlet.
  * 
- * @author <a href="mailto:shabanovd@gmail.com">Dmitriy Shabanov</a>
+ * @author <a href="mailto:wshager@gmail.com">Wouter Hager</a>
  * 
  */
 public class IPRangeServlet extends HttpServlet {
@@ -87,7 +88,7 @@ public class IPRangeServlet extends HttpServlet {
     	
     	LOG.info("GOT IPRangeServlet "+ip);
     	
-    	String json = "\"fail\"";
+    	String json = "{\"fail\":\"IP range not authenticated\"}";
     	
     	try {
     		SecurityManager secman = IPRangeRealm.instance.getSecurityManager();
@@ -97,7 +98,7 @@ public class IPRangeServlet extends HttpServlet {
 	    		final HttpSession session = request.getSession();
 	    		// store the user in the session
 	    		if (session != null) {
-	    			json = "{\"user\":\""+user.getUsername()+"\"}";
+	    			json = "{\"user\":\""+user.getUsername()+"\",\"isAdmin\":\""+user.hasDbaRole()+"\"}";
 	    			LOG.info("IPRangeServlet setting session attr "+ XQueryContext.HTTP_SESSIONVAR_XMLDB_USER);
 	    			session.setAttribute(XQueryContext.HTTP_SESSIONVAR_XMLDB_USER, user);
 	    		} else {
