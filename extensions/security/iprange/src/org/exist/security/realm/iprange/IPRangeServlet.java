@@ -84,7 +84,10 @@ public class IPRangeServlet extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
     	
-    	String ip = request.getRemoteAddr();
+    	
+    	String ip = request.getHeader("X-Forwarded-For");
+    	
+    	if(ip == null) ip = request.getRemoteAddr();
     	
     	LOG.info("GOT IPRangeServlet "+ip);
     	
