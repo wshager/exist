@@ -131,7 +131,7 @@ public class IPRangeRealm extends AbstractRealm {
                 LOG.error("IPRange broker unable to retrieve XQueryService");
             }
             
-            String query = "collection('/db/system/security/IPRange/accounts')/account[number(iprange/start) ge " + ipToTest + " and number(iprange/end) le " + ipToTest + "]/name";
+            String query = "collection('/db/system/security/IPRange/accounts')/account/iprange[number(start) ge " + ipToTest + " and number(end) le " + ipToTest + "]/../name";
             
             XQueryContext context = new XQueryContext(broker.getBrokerPool(), AccessContext.REST);
 
