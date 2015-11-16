@@ -45,6 +45,7 @@ import java.io.IOException;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Optional;
 
 /**
  * Implements the REST-style interface if eXist is running within a Servlet
@@ -117,7 +118,7 @@ public class EXistServlet extends AbstractExistHttpServlet {
             return;
         }
 
-        try(final DBBroker broker = getPool().get(user)) {
+        try(final DBBroker broker = getPool().get(Optional.of(user))) {
             final XmldbURI dbpath = XmldbURI.createInternal(path);
             final Collection collection = broker.getCollection(dbpath);
             if (collection != null) {
@@ -216,7 +217,7 @@ public class EXistServlet extends AbstractExistHttpServlet {
         }
 
         // fourth, process the request
-        try(final DBBroker broker = getPool().get(user)) {
+        try(final DBBroker broker = getPool().get(Optional.of(user))) {
 
             srvREST.doGet(broker, request, response, path);
             
@@ -280,7 +281,7 @@ public class EXistServlet extends AbstractExistHttpServlet {
         }
 
         // fourth, process the request
-        try(final DBBroker broker = getPool().get(user)) {
+        try(final DBBroker broker = getPool().get(Optional.of(user))) {
             srvREST.doHead(broker, request, response, path);
         } catch (final BadRequestException e) {
             if (response.isCommitted()) {
@@ -342,7 +343,7 @@ public class EXistServlet extends AbstractExistHttpServlet {
         }
 
         // fourth, process the request
-        try(final DBBroker broker = getPool().get(user)) {
+        try(final DBBroker broker = getPool().get(Optional.of(user))) {
             srvREST.doDelete(broker, path, request, response);
         } catch (final PermissionDeniedException e) {
             // If the current user is the Default User and they do not have permission
@@ -420,7 +421,7 @@ public class EXistServlet extends AbstractExistHttpServlet {
         }
 
         // fourth, process the request
-        try(final DBBroker broker = getPool().get(user)) {
+        try(final DBBroker broker = getPool().get(Optional.of(user))) {
             srvREST.doPost(broker, request, response, path);
         } catch (final PermissionDeniedException e) {
             // If the current user is the Default User and they do not have permission
