@@ -26,6 +26,7 @@ import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Date;
@@ -350,7 +351,7 @@ public class XQueryContext implements BinaryValueManager, Context
             }
         }
         // try an eXist-specific module
-        File resolved = null;
+        Path resolved = null;
         if (repo.isPresent()) {
             resolved = repo.get().resolveXQueryModule(namespace);
             // use the resolved file or return null
@@ -359,7 +360,7 @@ public class XQueryContext implements BinaryValueManager, Context
             }
         }
         // build a module object from the file
-        final Source src = new FileSource(resolved, "utf-8", false);
+        final Source src = new FileSource(resolved, false);
         return compileOrBorrowModule(prefix, namespace, "", src);
     }
     // TODO: end of expath repo manager, may change
@@ -2758,11 +2759,11 @@ public class XQueryContext implements BinaryValueManager, Context
                                 sourceDoc = getBroker().getXMLResource( locationUri.toCollectionPathURI(), Lock.READ_LOCK );
 
                                 if(sourceDoc == null) {
-                                    throw moduleLoadException("Module location hint URI '" + location + " does not refer to anything.", location);
+                                    throw moduleLoadException("Module location hint URI '" + location + "' does not refer to anything.", location);
                                 }
 
                                 if(( sourceDoc.getResourceType() != DocumentImpl.BINARY_FILE ) || !"application/xquery".equals(sourceDoc.getMetadata().getMimeType())) {
-                                    throw moduleLoadException("Module location hint URI '" + location + " does not refer to an XQuery.", location);
+                                    throw moduleLoadException("Module location hint URI '" + location + "' does not refer to an XQuery.", location);
                                 }
 
                                 moduleSource = new DBSource( getBroker(), (BinaryDocument)sourceDoc, true );
@@ -2778,7 +2779,7 @@ public class XQueryContext implements BinaryValueManager, Context
                                 }
                             }
                         } catch(final URISyntaxException e) {
-                            throw moduleLoadException("Invalid module location hint URI '" + location + ".", location, e);
+                            throw moduleLoadException("Invalid module location hint URI '" + location + "'.", location, e);
                         }
 
                     } else {
@@ -2790,9 +2791,9 @@ public class XQueryContext implements BinaryValueManager, Context
                             moduleSource = SourceFactory.getSource( getBroker(), moduleLoadPath, location, true );
 
                         } catch(final MalformedURLException e) {
-                            throw moduleLoadException("Invalid module location hint URI '" + location + ".", location, e);
+                            throw moduleLoadException("Invalid module location hint URI '" + location + "'.", location, e);
                         } catch(final IOException e) {
-                            throw moduleLoadException("Source for module '" + namespaceURI + "' not found module location hint URI '" + location + ".", location, e);
+                            throw moduleLoadException("Source for module '" + namespaceURI + "' not found module location hint URI '" + location + "'.", location, e);
                         } catch(final PermissionDeniedException e) {
                             throw moduleLoadException("Permission denied to read module source from location hint URI '" + location + ".", location, e);
                         }
