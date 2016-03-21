@@ -27,10 +27,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Source;
@@ -227,10 +224,14 @@ public abstract class Serializer implements XMLReader {
     
     
     public Serializer(DBBroker broker, Configuration config) {
+		this(broker, config, null);
+	}
+
+	public Serializer(DBBroker broker, Configuration config, List<String> chainOfReceivers) {
 		this.broker = broker;
 		factory = TransformerFactoryAllocator.getTransformerFactory(broker.getBrokerPool());
 		xinclude = new XIncludeFilter(this);
-        customMatchListeners = new CustomMatchListenerFactory(broker, config);
+        customMatchListeners = new CustomMatchListenerFactory(broker, config, chainOfReceivers);
 		receiver = xinclude;
 		
 		String option = (String) config.getProperty(PROPERTY_ENABLE_XSL);
@@ -303,18 +304,24 @@ public abstract class Serializer implements XMLReader {
 	
 	public void setProperty(String prop, Object value)
 		throws SAXNotRecognizedException, SAXNotSupportedException {
-		if (prop.equals(Namespaces.SAX_LEXICAL_HANDLER)) {
-			lexicalHandler = (LexicalHandler) value;
-        } else if (EXistOutputKeys.ADD_EXIST_ID.equals(prop)) {
-            if ("element".equals(value))
-                {showId = EXIST_ID_ELEMENT;}
-            else if ("all".equals(value))
-                {showId = EXIST_ID_ALL;}
-            else
-                {showId = EXIST_ID_NONE;}
-        } else {
-			outputProperties.put(prop, value);
+		switch (prop) {
+			case Namespaces.SAX_LEXICAL_HANDLER:
+				lexicalHandler = (LexicalHandler) value;
+				break;
+			case EXistOutputKeys.ADD_EXIST_ID:
+				if ("element".equals(value)) {
+					showId = EXIST_ID_ELEMENT;
+				} else if ("all".equals(value)) {
+					showId = EXIST_ID_ALL;
+				} else {
+					showId = EXIST_ID_NONE;
+				}
+				break;
+			default:
+				outputProperties.put(prop, value);
+				break;
 		}
+
 	}
 
 	public String getProperty(String key, String defaultValue) {
