@@ -340,8 +340,8 @@ public class NativeBroker extends DBBroker {
     //    for (int i = 0; i < contentLoadingObservers.size(); i++) {
     //        ContentLoadingObserver observer = (ContentLoadingObserver) contentLoadingObservers.get(i);
     //        observer.storeAttribute(attr, currentPath, indexingHint, spec, remove);
-    //    }	
-    //}	
+    //    }
+    //}
 
     private void notifyStoreText(final TextImpl text, final NodePath currentPath) {
         for(final ContentLoadingObserver observer : contentLoadingObservers) {
@@ -434,7 +434,7 @@ public class NativeBroker extends DBBroker {
                 NativeValueIndex.IDX_GENERIC, remove);
         }
 
-        // TODO : move to NativeValueIndexByQName 
+        // TODO : move to NativeValueIndexByQName
         if(RangeIndexSpec.hasQNameIndex(indexType)) {
             node.setQName(new QName(node.getQName(), ElementValue.ELEMENT));
             if(content == null) {
@@ -964,7 +964,7 @@ public class NativeBroker extends DBBroker {
             }
         }
 
-        //Important : 
+        //Important :
         //This code must remain outside of the synchronized block
         //because another thread may already own a lock on the collection
         //This would result in a deadlock... until the time-out raises the Exception
@@ -1242,11 +1242,11 @@ public class NativeBroker extends DBBroker {
         if(!destination.getPermissionsNoLock().validate(getCurrentSubject(), Permission.WRITE | Permission.EXECUTE)) {
             throw new PermissionDeniedException("Account " + getCurrentSubject().getName() + " have insufficient privileges on collection " + parent.getURI() + " to move collection " + collection.getURI());
         }
-        
+
         /*
          * If replacing another collection in the move i.e. /db/col1/A -> /db/col2 (where /db/col2/A exists)
          * we have to make sure the permissions to remove /db/col2/A are okay!
-         * 
+         *
          * So we must call removeCollection on /db/col2/A
          * Which will ensure that collection can be removed and then remove it.
          */
@@ -2542,8 +2542,8 @@ public class NativeBroker extends DBBroker {
         if(!destination.getPermissionsNoLock().validate(getCurrentSubject(), Permission.WRITE | Permission.EXECUTE)) {
             throw new PermissionDeniedException("Account " + getCurrentSubject().getName() + " have insufficient privileges on destination Collection to move resource " + doc.getFileURI());
         }
-        
-        
+
+
         /* Copy reference to original document */
         final Path fsOriginalDocument = getCollectionFile(getFsDir(), doc.getURI(), true);
 
@@ -3036,7 +3036,7 @@ public class NativeBroker extends DBBroker {
             ByteArrayPool.releaseByteArray(data);
         } catch(final Exception e) {
             final Value oldVal = domDb.get(node.getInternalAddress());
-            
+
             //TODO what can we do about abstracting this out?
             final IStoredNode old = StoredNode.deserialize(oldVal.data(),
                 oldVal.start(), oldVal.getLength(),
@@ -3879,8 +3879,8 @@ public class NativeBroker extends DBBroker {
                 if(run.totalMemory() >= run.maxMemory() && run.freeMemory() < pool.getReservedMem()) {
                     //LOG.info("total memory: " + run.totalMemory() + "; free: " + run.freeMemory());
                     flush();
-                    System.gc();
-                    LOG.info("total memory: " + run.totalMemory() + "; free: " + run.freeMemory());
+                    //System.gc();
+                    //LOG.info("total memory: " + run.totalMemory() + "; free: " + run.freeMemory());
                 }
                 nodesCount = 0;
             }
