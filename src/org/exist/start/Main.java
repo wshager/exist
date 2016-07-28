@@ -40,6 +40,9 @@ public class Main {
 
     private final static String START_CONFIG = "start.config";
 
+    public static final String STANDARD_ENABLED_JETTY_CONFIGS = "standard.enabled-jetty-configs";
+    public static final String STANDALONE_ENABLED_JETTY_CONFIGS = "standalone.enabled-jetty-configs";
+
     private String _classname = null;
     
     private String _mode = "jetty";
@@ -405,9 +408,9 @@ public class Main {
 
                 final String config;
                 if ("jetty".equals(_mode)) {
-                    config = "jetty.xml";
+                    config = STANDARD_ENABLED_JETTY_CONFIGS;
                 } else {
-                    config = "standalone.xml";
+                    config = STANDALONE_ENABLED_JETTY_CONFIGS;
                 }
 
                 args = new String[]{System.getProperty("jetty.home") + File.separatorChar + "etc"
@@ -498,7 +501,7 @@ public class Main {
 
             if (Files.isReadable(jar)) {
                 try {
-                    _home_dir = Paths.get(".").toAbsolutePath();
+                    _home_dir = Paths.get(".").normalize().toAbsolutePath();
                 } catch (final InvalidPathException e) {
                     // ignore
                 }
@@ -507,7 +510,7 @@ public class Main {
 
         if (_home_dir == null) {
             // failed: try ../exist.jar
-            final Path jar = Paths.get("..").resolve("exist.jar");
+            final Path jar = Paths.get("..").resolve("exist.jar").normalize();
             if (_debug) {
                 System.err.println("trying " + jar.toAbsolutePath());
             }
@@ -539,7 +542,7 @@ public class Main {
 
         if (_home_dir == null) {
             // try ../conf.xml
-            final Path jar = Paths.get("..").resolve("conf.xml");
+            final Path jar = Paths.get("..").resolve("conf.xml").normalize();
             if (_debug) {
                 System.err.println("trying " + jar.toAbsolutePath());
             }
