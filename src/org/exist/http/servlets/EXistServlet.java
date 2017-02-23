@@ -7,16 +7,16 @@
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- *  
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software Foundation
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
- *  
+ *
  *  $Id$
  */
 package org.exist.http.servlets;
@@ -66,7 +66,7 @@ public class EXistServlet extends AbstractExistHttpServlet {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see javax.servlet.GenericServlet#init(javax.servlet.ServletConfig)
      */
     @Override
@@ -88,7 +88,7 @@ public class EXistServlet extends AbstractExistHttpServlet {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * javax.servlet.http.HttpServlet#doPut(javax.servlet.http.HttpServletRequest
      * , javax.servlet.http.HttpServletResponse)
@@ -162,6 +162,10 @@ public class EXistServlet extends AbstractExistHttpServlet {
             return "";
         }
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(" In: " + path);
+        }
+
         // path contains both required and superficial escapes,
         // as different user agents use different conventions;
         // for the sake of interoperability, remove any unnecessary escapes
@@ -181,12 +185,16 @@ public class EXistServlet extends AbstractExistHttpServlet {
         }
         // path now is in proper canonical encoded form
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Out: " + path);
+        }
+
         return path;
     }
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * javax.servlet.http.HttpServlet#doGet(javax.servlet.http.HttpServletRequest
      * , javax.servlet.http.HttpServletResponse)
@@ -220,7 +228,7 @@ public class EXistServlet extends AbstractExistHttpServlet {
         try(final DBBroker broker = getPool().get(Optional.of(user))) {
 
             srvREST.doGet(broker, request, response, path);
-            
+
         } catch (final BadRequestException e) {
             if (response.isCommitted()) {
                 throw new ServletException(e.getMessage());
@@ -316,7 +324,7 @@ public class EXistServlet extends AbstractExistHttpServlet {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * javax.servlet.http.HttpServlet#doDelete(javax.servlet.http.HttpServletRequest
      * , javax.servlet.http.HttpServletResponse)
@@ -370,7 +378,7 @@ public class EXistServlet extends AbstractExistHttpServlet {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * javax.servlet.http.HttpServlet#doPost(javax.servlet.http.HttpServletRequest
      * , javax.servlet.http.HttpServletResponse)
