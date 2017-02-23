@@ -22,15 +22,17 @@
 package org.exist.xquery.functions.validate;
 
 import org.custommonkey.xmlunit.exceptions.XpathException;
+import org.exist.TestUtils;
+import org.exist.test.ExistXmldbEmbeddedServer;
+import org.exist.util.FileUtils;
 import org.junit.*;
 import static org.junit.Assert.*;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 
-import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
-
-import org.exist.test.EmbeddedExistTester;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.function.Predicate;
 
 import org.xml.sax.SAXException;
 import org.xmldb.api.base.Collection;
@@ -42,46 +44,53 @@ import org.xmldb.api.base.XMLDBException;
  * 
  * @author dizzzz@exist-db.org
  */
-public class JingRelaxNgTest extends EmbeddedExistTester {
+public class JingRelaxNgTest {
+
+    @ClassRule
+    public static final ExistXmldbEmbeddedServer existEmbeddedServer = new ExistXmldbEmbeddedServer();
 
     @BeforeClass
     public static void prepareResources() throws Exception {
 
-        String noValidation = "<?xml version='1.0'?>" +
+        final String noValidation = "<?xml version='1.0'?>" +
                 "<collection xmlns=\"http://exist-db.org/collection-config/1.0" +
                 "\">" +
                 "<validation mode=\"no\"/>" +
                 "</collection>";
 
-        Collection conf = createCollection(rootCollection, "system/config/db/personal");
-        storeResource(conf, "collection.xconf", noValidation.getBytes());
-
-        Collection collection = createCollection(rootCollection, "personal");
-
-        File directory = new File("samples/validation/personal");
-
-        FilenameFilter filter = new FilenameFilter() {
-
-            public boolean accept(File dir, String name) {
-                return (name.startsWith("personal"));
+        Collection conf = null;
+        try {
+            conf = existEmbeddedServer.createCollection(existEmbeddedServer.getRoot(), "system/config/db/personal");
+            ExistXmldbEmbeddedServer.storeResource(conf, "collection.xconf", noValidation.getBytes());
+        } finally {
+            if(conf != null) {
+                conf.close();
             }
-        };
-
-        for (File file : directory.listFiles(filter)) {
-            byte[] data = readFile(directory, file.getName());
-            storeResource(collection, file.getName(), data);
         }
 
-    }
+        Collection collection = null;
+        try {
+            collection = existEmbeddedServer.createCollection(existEmbeddedServer.getRoot(), "personal");
 
+            final Path directory = Paths.get("samples/validation/personal");
+            final Predicate<Path> filter = path -> FileUtils.fileName(path).startsWith("personal");
+            for (final Path file : FileUtils.list(directory, filter)) {
+                final byte[] data = TestUtils.readFile(file);
+                ExistXmldbEmbeddedServer.storeResource(collection, FileUtils.fileName(file), data);
+            }
+        } finally {
+            if(collection != null) {
+                collection.close();
+            }
+        }
+    }
 
     @Test
     public void rng_stored_valid_boolean() throws XMLDBException {
-        String query = "validation:jing( " +
+        final String query = "validation:jing( " +
                 "doc('/db/personal/personal-valid.xml'), " +
                 "doc('/db/personal/personal.rng') )";
-
-        ResourceSet results = executeQuery(query);
+        final ResourceSet results = existEmbeddedServer.executeQuery(query);
         assertEquals(1, results.getSize());
         assertEquals(query, "true",
                 results.getResource(0).getContent().toString());
@@ -89,80 +98,72 @@ public class JingRelaxNgTest extends EmbeddedExistTester {
     
     @Test
     public void rng_stored_valid() throws XMLDBException, SAXException, XpathException, IOException {
-        String query = "validation:jing-report( " +
+        final String query = "validation:jing-report( " +
                 "doc('/db/personal/personal-valid.xml'), " +
                 "doc('/db/personal/personal.rng') )";
-
         executeAndEvaluate(query,"valid");
     }
 
     @Test
     public void rng_stored_invalid() throws XMLDBException, SAXException, XpathException, IOException {
-        String query = "validation:jing-report( " +
+        final String query = "validation:jing-report( " +
                 "doc('/db/personal/personal-invalid.xml'), " +
                 "doc('/db/personal/personal.rng') )";
-
         executeAndEvaluate(query,"invalid");
     }
 
     @Test
     public void rng_anyuri_valid() throws XMLDBException, SAXException, XpathException, IOException {
-        String query = "validation:jing-report( " +
+        final String query = "validation:jing-report( " +
                 "xs:anyURI('xmldb:exist:///db/personal/personal-valid.xml'), " +
                 "xs:anyURI('xmldb:exist:///db/personal/personal.rng') )";
-
         executeAndEvaluate(query,"valid");
     }
 
     @Test
     public void rng_anyuri_invalid() throws XMLDBException, SAXException, XpathException, IOException {
-        String query = "validation:jing-report( " +
+        final String query = "validation:jing-report( " +
                 "xs:anyURI('xmldb:exist:///db/personal/personal-invalid.xml'), " +
                 "xs:anyURI('xmldb:exist:///db/personal/personal.rng') )";
-
         executeAndEvaluate(query,"invalid");
     }
 
     @Test
     public void rnc_stored_valid() throws XMLDBException, SAXException, XpathException, IOException {
-        String query = "validation:jing-report( " +
+        final String query = "validation:jing-report( " +
                 "doc('/db/personal/personal-valid.xml'), " +
                 "util:binary-doc('/db/personal/personal.rnc') )";
-
         executeAndEvaluate(query,"valid");
     }
 
     @Test
     public void rnc_stored_invalid() throws XMLDBException, SAXException, XpathException, IOException {
-        String query = "validation:jing-report( " +
+        final String query = "validation:jing-report( " +
                 "doc('/db/personal/personal-invalid.xml'), " +
                 "util:binary-doc('/db/personal/personal.rnc') )";
-
         executeAndEvaluate(query,"invalid");
     }
 
     @Test
     public void rnc_anyuri_valid() throws XMLDBException, SAXException, XpathException, IOException {
-        String query = "validation:jing-report( xs:anyURI('xmldb:exist:///db/personal/personal-valid.xml'), " +
+        final String query = "validation:jing-report( xs:anyURI('xmldb:exist:///db/personal/personal-valid.xml'), " +
                 "xs:anyURI('xmldb:exist:///db/personal/personal.rnc') )";
-
         executeAndEvaluate(query,"valid");
     }
 
     @Test
     public void rnc_anyuri_invalid() throws XMLDBException, SAXException, XpathException, IOException {
-        String query = "validation:jing-report( xs:anyURI('xmldb:exist:///db/personal/personal-invalid.xml'), " +
+        final String query = "validation:jing-report( xs:anyURI('xmldb:exist:///db/personal/personal-invalid.xml'), " +
                 "xs:anyURI('xmldb:exist:///db/personal/personal.rnc') )";
-
         executeAndEvaluate(query,"invalid");
     }
 
-    private void executeAndEvaluate(String query, String expectedValue) throws XMLDBException, SAXException, IOException, XpathException {
-        ResourceSet results = executeQuery(query);
+    private void executeAndEvaluate(final String query, final String expectedValue)
+            throws XMLDBException, SAXException, IOException, XpathException {
+        final ResourceSet results = existEmbeddedServer.executeQuery(query);
         assertEquals(1, results.getSize());
 
-        String r = (String) results.getResource(0).getContent();
-
+        final String r = (String) results.getResource(0).getContent();
         assertXpathEvaluatesTo(expectedValue, "//status/text()", r);
     }
 }

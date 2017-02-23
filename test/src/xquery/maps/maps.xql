@@ -435,6 +435,17 @@ function mt:lookupWrongType() {
         ($map, $str)?one
 };
 
+declare
+    %test:assertTrue
+function mt:lookupWildcard() {
+    let $expected := map:keys($mt:daysOfWeek) ! $mt:daysOfWeek(.)
+    let $actual := $mt:daysOfWeek?*
+    return
+        count($actual) eq count($expected)
+        and
+        (every $day in $actual satisfies $day = $expected)
+};
+
 declare 
     %test:assertEquals(1)
 function mt:compat() {

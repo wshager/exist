@@ -22,8 +22,7 @@
 package org.exist.xquery;
 
 import org.custommonkey.xmlunit.DetailedDiff;
-import org.exist.TestUtils;
-import org.exist.xmldb.DatabaseInstanceManager;
+import org.exist.test.ExistXmldbEmbeddedServer;
 import org.exist.xmldb.EXistResource;
 import org.exist.xmldb.XmldbURI;
 import org.junit.*;
@@ -32,7 +31,6 @@ import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 import org.xmldb.api.DatabaseManager;
 import org.xmldb.api.base.Collection;
-import org.xmldb.api.base.Database;
 import org.xmldb.api.base.Resource;
 import org.xmldb.api.base.ResourceSet;
 import org.xmldb.api.base.XMLDBException;
@@ -42,7 +40,6 @@ import org.xmldb.api.modules.XPathQueryService;
 import org.xmldb.api.modules.XQueryService;
 
 import javax.xml.transform.OutputKeys;
-import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -61,6 +58,9 @@ import static org.junit.Assert.*;
  * TODO maybe move the various eXist XQuery extensions in another class ...
  */
 public class XQueryTest {
+
+    @ClassRule
+    public static final ExistXmldbEmbeddedServer existEmbeddedServer = new ExistXmldbEmbeddedServer();
 
     private static final String NUMBERS_XML = "numbers.xml";
     private static final String BOWLING_XML = "bowling.xml";
@@ -137,44 +137,24 @@ public class XQueryTest {
         "<test att='b' />" +
         "<test att='c' />" +
         "</blob>";
-    private static String attributeXML;
+
     private static int stringSize = 512;
     private static int nbElem = 1;
     private String file_name = "detail_xml.xml";
     private String xml;
-    private static Database database;
-
-    @BeforeClass
-    public static void setUpOnce() throws ClassNotFoundException, IllegalAccessException, InstantiationException, XMLDBException {
-        // initialize driver
-        Class<?> cl = Class.forName("org.exist.xmldb.DatabaseImpl");
-        database = (Database) cl.newInstance();
-        database.setProperty("create-database", "true");
-        DatabaseManager.registerDatabase(database);
-    }
 
     @Before
     public void setup() throws XMLDBException {
-        Collection root =
-                DatabaseManager.getCollection(XmldbURI.LOCAL_DB, "admin", "");
-        CollectionManagementService service =
-                (CollectionManagementService) root.getService("CollectionManagementService", "1.0");
-        Collection testCollection = service.createCollection("test");
-        assertNotNull(testCollection);
+        final CollectionManagementService service =
+                (CollectionManagementService) existEmbeddedServer.getRoot().getService("CollectionManagementService", "1.0");
+        service.createCollection("test");
     }
 
     @After
-    public void tearDown() {
-        TestUtils.cleanupDB();
-    }
-
-    @AfterClass
-    public static void tearDownOnce() throws XMLDBException {
-        DatabaseInstanceManager dim =
-                (DatabaseInstanceManager) DatabaseManager.getCollection("xmldb:exist:///db", "admin", "").getService("DatabaseInstanceManager", "1.0");
-        dim.shutdown();
-        DatabaseManager.deregisterDatabase(database);
-        database = null;
+    public void tearDown() throws XMLDBException {
+        final CollectionManagementService service =
+                (CollectionManagementService) existEmbeddedServer.getRoot().getService("CollectionManagementService", "1.0");
+        service.removeCollection("test");
     }
 
     private Collection getTestCollection() throws XMLDBException {
@@ -1365,6 +1345,17 @@ public class XQueryTest {
     }
 
     @Test
+    public void instanceOfNamespaceNode() throws XMLDBException {
+        ResourceSet result = existEmbeddedServer.executeQuery("namespace test { 'test' } instance of namespace-node()");
+        assertEquals(1,result.getSize());
+        assertEquals("true", result.getResource(0).getContent().toString());
+
+        result = existEmbeddedServer.executeQuery("<x/> instance of namespace-node()");
+        assertEquals(1, result.getSize());
+        assertEquals("false", result.getResource(0).getContent().toString());
+    }
+
+    @Test
     public void largeAttributeSimple() throws XMLDBException {
         ResourceSet result;
         String query;
@@ -1553,38 +1544,29 @@ public class XQueryTest {
     public void retrieveLargeAttribute() throws XMLDBException {
         createXMLContentWithLargeString();
         storeXMLStringAndGetQueryService(file_name, xml);
-        XMLResource res = (XMLResource) getTestCollection().getResource(file_name);
+        final XMLResource res = (XMLResource) getTestCollection().getResource(file_name);
+        assertTrue(res != null);
     }
 
-    /**
-     * This test is obsolete because testLargeAttributeSimple() reproduces the problem without a file,
-     * but I keep it to show how one can test with an XML file.
-     */
-    @Ignore
     @Test
-    public void largeAttributeRealFile() throws XMLDBException {
-        ResourceSet result;
-        String query;
-        @SuppressWarnings("unused")
-		XMLResource resu;
-
-        String large;
-        large = "challengesininformationretrievalandlanguagemodelingreportofaworkshopheldatthecenterforintelligentinformationretrievaluniversityofmassachusettsamherstseptember2002-extdocid-howardturtlemarksandersonnorbertfuhralansmeatonjayaslamdragomirradevwesselkraaijellenvoorheesamitsinghaldonnaharmanjaypontejamiecallannicholasbelkinjohnlaffertylizliddyronirosenfeldvictorlavrenkodavidjharperrichschwartzjohnpragerchengxiangzhaijinxixusalimroukosstephenrobertsonandrewmccallumbrucecroftrmanmathasuedumaisdjoerdhiemstraeduardhovyralphweischedelthomashofmannjamesallanchrisbuckleyphilipresnikdavidlewis2003";
-        if (attributeXML != null) {
-            large = attributeXML;
-        }
-        @SuppressWarnings("unused")
+    public void largeAttributeText() throws XMLDBException {
+        final String large = "challengesininformationretrievalandlanguagemodelingreportofaworkshopheldatthecenterforintelligentinformationretrievaluniversityofmassachusettsamherstseptember2002-extdocid-howardturtlemarksandersonnorbertfuhralansmeatonjayaslamdragomirradevwesselkraaijellenvoorheesamitsinghaldonnaharmanjaypontejamiecallannicholasbelkinjohnlaffertylizliddyronirosenfeldvictorlavrenkodavidjharperrichschwartzjohnpragerchengxiangzhaijinxixusalimroukosstephenrobertsonandrewmccallumbrucecroftrmanmathasuedumaisdjoerdhiemstraeduardhovyralphweischedelthomashofmannjamesallanchrisbuckleyphilipresnikdavidlewis2003";
         String xml = "<details format='xml'><metadata docid='" + large +
                 "'></metadata></details>";
         final String FILE_NAME = "detail_xml.xml";
-        XPathQueryService service =
-                storeXMLStringAndGetQueryService(FILE_NAME);
+        XPathQueryService service = storeXMLStringAndGetQueryService(FILE_NAME, xml);
 
-        query = "doc('" + FILE_NAME + "') / details/metadata[@docid= '" + large + "' ]"; // fails !!!
-        // query = "doc('"+ FILE_NAME+"') / details/metadata[ docid= '" + large + "' ]"; // test passes!
+        String query = "doc('" + FILE_NAME + "') / details/metadata[@docid= '" + large + "' ]";
+        ResourceSet result = service.queryResource(FILE_NAME, query);
+        assertEquals(1, result.getSize());
 
+        xml = "<details format='xml'><metadata><docid>" + large +
+                "</docid></metadata></details>";
+        service = storeXMLStringAndGetQueryService(FILE_NAME, xml);
+
+        query = "doc('"+ FILE_NAME+"') / details/metadata[ docid= '" + large + "' ]";
         result = service.queryResource(FILE_NAME, query);
-        assertEquals("XQuery: " + query, 2, result.getSize());
+        assertEquals(1, result.getSize());
     }
 
     @Ignore
@@ -2030,6 +2012,8 @@ public class XQueryTest {
      * Regression
      *
      * @see http://sourceforge.net/support/tracker.php?aid=1805612
+     *
+     * Same as {@link #asDouble_1840775()}
      */
     @Ignore
     @Test
@@ -2573,6 +2557,8 @@ public class XQueryTest {
 
     /**
      * @see http://sourceforge.net/support/tracker.php?aid=1840775
+     *
+     * Same as {@link #wrongAttributeTypeCheck_1805612()}
      */
     @Ignore
     @Test
@@ -2801,6 +2787,49 @@ public class XQueryTest {
         assertEquals("XQuery: " + query, 3, result.getSize());
     }
 
+    @Test(expected=XPathException.class)
+    public void pathOperatorContainingNodesAndNonNodes() throws XMLDBException, XPathException {
+        final String query = "declare function local:test() { (1,<n/>) };\n" +
+                "<x/>/local:test()";
+        try {
+            existEmbeddedServer.executeQuery(query);
+        } catch(final XMLDBException e) {
+            if(e.getCause() instanceof XPathException) {
+                final XPathException xpe = (XPathException)e.getCause();
+                assertEquals(ErrorCodes.XPTY0018, xpe.getErrorCode());
+                throw xpe;
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    @Test
+    public void exprContainingNodesAndNonNodes() throws XMLDBException, XPathException {
+        final String query = "declare function local:test() { (1,<n/>) };\n" +
+                "local:test()";
+        final ResourceSet result = existEmbeddedServer.executeQuery(query);
+
+        assertEquals(2, result.getSize());
+        assertEquals("1", result.getResource(0).getContent().toString());
+        assertEquals("<n/>", result.getResource(1).getContent().toString());
+    }
+
+    /**
+     * @see https://github.com/eXist-db/exist/issues/1121
+     */
+    @Test
+    public void multipleExprsContainingNodesAndNonNodes() throws XMLDBException, XPathException {
+        final String query = "declare variable $a := 'a';\n" +
+                "declare function local:test() { (1,<n/>) };\n" +
+                "local:test()";
+        final ResourceSet result = existEmbeddedServer.executeQuery(query);
+
+        assertEquals(2, result.getSize());
+        assertEquals("1", result.getResource(0).getContent().toString());
+        assertEquals("<n/>", result.getResource(1).getContent().toString());
+    }
+
     // ======================================
     /**
      * @return
@@ -2818,22 +2847,6 @@ public class XQueryTest {
                 (XPathQueryService) testCollection.getService(
                 "XPathQueryService",
                 "1.0");
-        return service;
-    }
-
-    /**
-     * @return
-     * @throws XMLDBException
-     */
-    private XPathQueryService storeXMLStringAndGetQueryService(String documentName) throws XMLDBException {
-        Collection testCollection = getTestCollection();
-        XMLResource doc =
-                (XMLResource) testCollection.createResource(
-                documentName, "XMLResource");
-        doc.setContent(new File(documentName));
-        testCollection.storeResource(doc);
-        XPathQueryService service = (XPathQueryService) testCollection.getService(
-                "XPathQueryService", "1.0");
         return service;
     }
 }

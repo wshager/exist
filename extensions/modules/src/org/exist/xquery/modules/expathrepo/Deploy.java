@@ -38,7 +38,7 @@ import org.exist.repo.Deployment;
 import org.exist.repo.PackageLoader;
 import org.exist.security.PermissionDeniedException;
 import org.exist.storage.NativeBroker;
-import org.exist.storage.lock.Lock;
+import org.exist.storage.lock.Lock.LockMode;
 import org.exist.xmldb.XmldbURI;
 import org.exist.xquery.*;
 import org.exist.xquery.value.*;
@@ -200,7 +200,7 @@ public class Deploy extends BasicFunction {
         final XmldbURI docPath = XmldbURI.createInternal(path);
         DocumentImpl doc = null;
         try {
-            doc = context.getBroker().getXMLResource(docPath, Lock.READ_LOCK);
+            doc = context.getBroker().getXMLResource(docPath, LockMode.READ_LOCK);
             if (doc.getResourceType() != DocumentImpl.BINARY_FILE)
                 throw new XPathException(this, EXPathErrorCode.EXPDY001, path + " is not a valid .xar", new StringValue(path));
 
@@ -213,10 +213,10 @@ public class Deploy extends BasicFunction {
             return deployment.installAndDeploy(file, loader);
         } catch (PackageException | IOException | PermissionDeniedException e) {
             LOG.error(e.getMessage(), e);
-            throw new XPathException(this, EXPathErrorCode.EXPDY007, e.getMessage());
+            throw new XPathException(this, EXPathErrorCode.EXPDY007, "Package installation failed: " + e.getMessage(), new StringValue(e.getMessage()));
         } finally {
             if (doc != null)
-                doc.getUpdateLock().release(Lock.READ_LOCK);
+                doc.getUpdateLock().release(LockMode.READ_LOCK);
         }
     }
 
@@ -284,6 +284,8 @@ public class Deploy extends BasicFunction {
                 final Path outFile = Files.createTempFile("deploy", "xar");
                 Files.copy(is, outFile, StandardCopyOption.REPLACE_EXISTING);
                 return outFile;
+            } catch (IOException e) {
+                throw new IOException("Failed to install dependency from " + pkgURL + ": " + e.getMessage());
             }
         }
     }

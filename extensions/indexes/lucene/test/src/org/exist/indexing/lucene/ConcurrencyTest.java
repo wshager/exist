@@ -23,35 +23,40 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.exist.TestUtils;
+import org.exist.test.ExistXmldbEmbeddedServer;
+import org.exist.util.FileUtils;
 import org.exist.util.MimeTable;
 import org.exist.util.MimeType;
-import org.exist.xmldb.DatabaseInstanceManager;
 import org.exist.xmldb.IndexQueryService;
 import org.exist.xmldb.XQueryService;
-import org.exist.xmldb.XmldbURI;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
-import org.xmldb.api.DatabaseManager;
 import org.xmldb.api.base.Collection;
-import org.xmldb.api.base.Database;
 import org.xmldb.api.base.Resource;
 import org.xmldb.api.base.ResourceSet;
 import org.xmldb.api.base.XMLDBException;
-import org.xmldb.api.modules.CollectionManagementService;
+import org.xmldb.api.modules.XMLResource;
 import org.xmldb.api.modules.XUpdateQueryService;
 
 public class ConcurrencyTest {
 
+    @ClassRule
+    public static final ExistXmldbEmbeddedServer existEmbeddedServer = new ExistXmldbEmbeddedServer();
+
     private static Collection test;
 
-    private static String COLLECTION_CONFIG1 =
+    private static final String COLLECTION_CONFIG1 =
         "<collection xmlns=\"http://exist-db.org/collection-config/1.0\">" +
     	"	<index>" +
         "       <lucene>" +
@@ -63,33 +68,16 @@ public class ConcurrencyTest {
 
     @Test
 	public void store() {
-		ExecutorService executor = Executors.newFixedThreadPool(10);
+		final ExecutorService executor = Executors.newFixedThreadPool(10);
 
         for (int i = 0; i < 10; i++) {
             final String name = "thread" + i;
-            Runnable run = () -> storeRemoveDocs(name);
-            executor.submit(run);
-        }
-
-        executor.shutdown();
-		boolean terminated = false;
-		try {
-			terminated = executor.awaitTermination(60 * 60, TimeUnit.SECONDS);
-		} catch (InterruptedException e) {
-		    //Nothing to do
-		}
-		assertTrue(terminated);
-    }
-
-    @Test
-	public void update() {
-		ExecutorService executor = Executors.newFixedThreadPool(10);
-
-        for (int i = 0; i < 5; i++) {
-            final String name = "thread" + i;
-            Runnable run = new Runnable() {
-                public void run() {
-                    xupdateDocs(name);
+            final Runnable run = () -> {
+                try {
+                    storeRemoveDocs(name);
+                } catch(final XMLDBException | IOException e) {
+                    e.printStackTrace();;
+                    fail(e.getMessage());
                 }
             };
             executor.submit(run);
@@ -99,111 +87,120 @@ public class ConcurrencyTest {
 		boolean terminated = false;
 		try {
 			terminated = executor.awaitTermination(60 * 60, TimeUnit.SECONDS);
-		} catch (InterruptedException e) {
+		} catch (final InterruptedException e) {
 		    //Nothing to do
 		}
 		assertTrue(terminated);
     }
 
-    private void storeRemoveDocs(String collectionName) {
+    @Test
+	public void update() {
+		final ExecutorService executor = Executors.newFixedThreadPool(10);
+
+        for (int i = 0; i < 5; i++) {
+            final String name = "thread" + i;
+            Runnable run = () -> {
+                try {
+                    xupdateDocs(name);
+                } catch (final XMLDBException | IOException e) {
+                    e.printStackTrace();
+                    fail(e.getMessage());
+                }
+            };
+            executor.submit(run);
+        }
+
+        executor.shutdown();
+		boolean terminated = false;
+		try {
+			terminated = executor.awaitTermination(60 * 60, TimeUnit.SECONDS);
+		} catch (final InterruptedException e) {
+		    //Nothing to do
+		}
+		assertTrue(terminated);
+    }
+
+    private void storeRemoveDocs(final String collectionName) throws XMLDBException, IOException {
+        storeDocs(collectionName);
+
+        final XQueryService xqs = (XQueryService) test.getService("XQueryService", "1.0");
+        ResourceSet result = xqs.query("//SPEECH[ft:query(LINE, 'king')]");
+        assertEquals(98, result.getSize());
+
+        result = xqs.query("//SPEECH[ft:query(SPEAKER, 'juliet')]");
+        assertEquals(118, result.getSize());
+
+        final String[] resources = test.listResources();
+        for (int i = 0; i < resources.length; i++) {
+            final Resource resource = test.getResource(resources[i]);
+            test.removeResource(resource);
+        }
+        result = xqs.query("//SPEECH[ft:query(LINE, 'king')]");
+        assertEquals(0, result.getSize());
+
+        result = xqs.query("//SPEECH[ft:query(SPEAKER, 'juliet')]");
+        assertEquals(0, result.getSize());
+    }
+
+    private void xupdateDocs(final String collectionName) throws XMLDBException, IOException {
+        storeDocs(collectionName);
+
+        final XQueryService xqs = (XQueryService) test.getService("XQueryService", "1.0");
+        ResourceSet result = xqs.query("//SPEECH[ft:query(SPEAKER, 'juliet')]");
+        assertEquals(118, result.getSize());
+
+        final String xupdate =
+            LuceneIndexTest.XUPDATE_START +
+            "   <xu:remove select=\"//SPEECH[ft:query(SPEAKER, 'juliet')]\"/>" +
+            LuceneIndexTest.XUPDATE_END;
+        final XUpdateQueryService xuqs = (XUpdateQueryService) test.getService("XUpdateQueryService", "1.0");
+        xuqs.update(xupdate);
+
+        result = xqs.query("//SPEECH[ft:query(SPEAKER, 'juliet')]");
+        assertEquals(0, result.getSize());
+
+        result = xqs.query("//SPEECH[ft:query(LINE, 'king')]");
+        assertEquals(98, result.getSize());
+    }
+
+    private void storeDocs(final String collectionName) throws XMLDBException, IOException {
+        Collection collection = null;
         try {
-            storeDocs(collectionName);
+            collection = existEmbeddedServer.createCollection(test, collectionName);
 
-            XQueryService xqs = (XQueryService) test.getService("XQueryService", "1.0");
-            ResourceSet result = xqs.query("//SPEECH[ft:query(LINE, 'king')]");
-            assertEquals(98, result.getSize());
-            result = xqs.query("//SPEECH[ft:query(SPEAKER, 'juliet')]");
-            assertEquals(118, result.getSize());
+            final IndexQueryService iqs = (IndexQueryService) collection.getService("IndexQueryService", "1.0");
+            iqs.configureCollection(COLLECTION_CONFIG1);
 
-            String[] resources = test.listResources();
-            for (int i = 0; i < resources.length; i++) {
-                Resource resource = test.getResource(resources[i]);
-                test.removeResource(resource);
+            final String existHome = System.getProperty("exist.home");
+            Path existDir = existHome == null ? Paths.get(".") : Paths.get(existHome);
+            existDir = existDir.normalize();
+
+            final Path samples = existDir.resolve("samples/shakespeare");
+            final List<Path> files = FileUtils.list(samples);
+            final MimeTable mimeTab = MimeTable.getInstance();
+            for (final Path file : files) {
+                final MimeType mime = mimeTab.getContentTypeFor(FileUtils.fileName(file));
+                if (mime != null && mime.isXMLType()) {
+                    final Resource resource = collection.createResource(FileUtils.fileName(file), XMLResource.RESOURCE_TYPE);
+                    resource.setContent(file);
+                    collection.storeResource(resource);
+                }
             }
-            result = xqs.query("//SPEECH[ft:query(LINE, 'king')]");
-            assertEquals(0, result.getSize());
-            result = xqs.query("//SPEECH[ft:query(SPEAKER, 'juliet')]");
-            assertEquals(0, result.getSize());
-        } catch (XMLDBException e) {
-            e.printStackTrace();
-            fail(e.getMessage());
-        }
-    }
-
-    private void xupdateDocs(String collectionName) {
-        try {
-            storeDocs(collectionName);
-
-            XQueryService xqs = (XQueryService) test.getService("XQueryService", "1.0");
-            ResourceSet result = xqs.query("//SPEECH[ft:query(SPEAKER, 'juliet')]");
-            assertEquals(118, result.getSize());
-
-            String xupdate =
-                LuceneIndexTest.XUPDATE_START +
-                "   <xu:remove select=\"//SPEECH[ft:query(SPEAKER, 'juliet')]\"/>" +
-                LuceneIndexTest.XUPDATE_END;
-            XUpdateQueryService xuqs = (XUpdateQueryService) test.getService("XUpdateQueryService", "1.0");
-            xuqs.update(xupdate);
-
-            result = xqs.query("//SPEECH[ft:query(SPEAKER, 'juliet')]");
-            assertEquals(0, result.getSize());
-            result = xqs.query("//SPEECH[ft:query(LINE, 'king')]");
-            assertEquals(98, result.getSize());
-        } catch (XMLDBException e) {
-            e.printStackTrace();
-            fail(e.getMessage());
-        }
-    }
-
-    private void storeDocs(String collectionName) throws XMLDBException {
-        CollectionManagementService service = (CollectionManagementService) test.getService("CollectionManagementService", "1.0");
-        Collection collection = service.createCollection(collectionName);
-        IndexQueryService iqs = (IndexQueryService) collection.getService("IndexQueryService", "1.0");
-        iqs.configureCollection(COLLECTION_CONFIG1);
-
-        String existHome = System.getProperty("exist.home");
-        File existDir = existHome==null ? new File(".") : new File(existHome);
-        File samples = new File(existDir,"samples/shakespeare");
-        File[] files = samples.listFiles();
-        MimeTable mimeTab = MimeTable.getInstance();
-        for (int j = 0; j < files.length; j++) {
-            MimeType mime = mimeTab.getContentTypeFor(files[j].getName());
-            if(mime != null && mime.isXMLType()) {
-                Resource resource = collection.createResource(files[j].getName(), "XMLResource");
-                resource.setContent(files[j]);
-                collection.storeResource(resource);
+        } finally {
+            if(collection != null) {
+                collection.close();
             }
         }
     }
 
     @BeforeClass
-    public static void initDB() {
-        // initialize XML:DB driver
-        try {
-            Class<?> cl = Class.forName("org.exist.xmldb.DatabaseImpl");
-            Database database = (Database) cl.newInstance();
-            database.setProperty("create-database", "true");
-            DatabaseManager.registerDatabase(database);
-
-            org.xmldb.api.base.Collection root = DatabaseManager.getCollection(XmldbURI.LOCAL_DB, "admin", "");
-            CollectionManagementService mgmt = (CollectionManagementService) root.getService("CollectionManagementService", "1.0");
-            test = mgmt.createCollection("test");
-        } catch (Exception e) {
-            e.printStackTrace();
-            fail(e.getMessage());
-        }
+    public static void initDB() throws ClassNotFoundException, IllegalAccessException, InstantiationException, XMLDBException {
+        test = existEmbeddedServer.createCollection(existEmbeddedServer.getRoot(), "test");
     }
 
     @AfterClass
-    public static void closeDB() {
+    public static void closeDB() throws XMLDBException {
+        test.close();
         TestUtils.cleanupDB();
-        try {
-            Collection root = DatabaseManager.getCollection(XmldbURI.LOCAL_DB, "admin", "");
-            DatabaseInstanceManager mgr = (DatabaseInstanceManager) root.getService("DatabaseInstanceManager", "1.0");
-            mgr.shutdown();
-        } catch (XMLDBException e) {
-            e.printStackTrace();
-            fail(e.getMessage());
-        }
     }
 }

@@ -36,13 +36,26 @@ import java.util.*;
 
 public class ComplexRangeIndexConfigElement extends RangeIndexConfigElement {
 
+    public static final Comparator<ComplexRangeIndexConfigElement> NUM_CONDITIONS_COMPARATOR =
+            Comparator.comparingInt(ComplexRangeIndexConfigElement::getNumberOfConditions).reversed();
+
+
     public final static String FIELD_ELEMENT = "field";
+    public final static String CONDITION_ELEMENT = "condition";
 
     private static final Logger LOG = LogManager.getLogger(ComplexRangeIndexConfigElement.class);
 
     private Map<String, RangeIndexConfigField> fields = new HashMap<String, RangeIndexConfigField>();
 
-    public ComplexRangeIndexConfigElement(Element node, NodeList children, Map<String, String> namespaces)
+
+    protected ArrayList<RangeIndexConfigCondition> conditions = new ArrayList<RangeIndexConfigCondition>();
+    public ArrayList<RangeIndexConfigCondition> getConditions() {
+        return conditions;
+    }
+    public int getNumberOfConditions() { return conditions.size(); }
+
+
+    public ComplexRangeIndexConfigElement(final Element node, final NodeList children, final Map<String, String> namespaces)
             throws DatabaseConfigurationException {
         super(node, namespaces);
 
@@ -50,8 +63,12 @@ public class ComplexRangeIndexConfigElement extends RangeIndexConfigElement {
             Node child = children.item(i);
             if (child.getNodeType() == Node.ELEMENT_NODE) {
                 if (FIELD_ELEMENT.equals(child.getLocalName())) {
-                    RangeIndexConfigField field = new RangeIndexConfigField(path, (Element)child, namespaces);
+                    RangeIndexConfigField field = new RangeIndexConfigField(path, (Element) child, namespaces);
                     fields.put(field.getName(), field);
+                } else if (CONDITION_ELEMENT.equals(child.getLocalName())){
+                    conditions.add(new RangeIndexConfigCondition((Element) child, path));
+                } else if (FILTER_ELEMENT.equals(child.getLocalName())) {
+                    analyzer.addFilter((Element) child);
                 } else {
                     LOG.warn("Invalid element encountered for range index configuration: " + child.getLocalName());
                 }
@@ -135,4 +152,23 @@ public class ComplexRangeIndexConfigElement extends RangeIndexConfigElement {
         }
         return null;
     }
+
+    public boolean matchConditions(Node node) {
+        for (RangeIndexConfigCondition condition : conditions) {
+            if (!condition.matches(node))
+                return false;
+        }
+
+        return true;
+    }
+
+    public boolean findCondition(QName lhe, String rhe, RangeIndex.Operator operator) {
+        for (RangeIndexConfigCondition condition : conditions) {
+            if (condition.find(lhe, rhe, operator))
+                return true;
+        }
+
+        return false;
+    }
+
 }

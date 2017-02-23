@@ -60,15 +60,14 @@ import org.exist.dom.QName;
 import org.exist.dom.memtree.SAXAdapter;
 import org.exist.security.Permission;
 import org.exist.security.PermissionDeniedException;
-import org.exist.security.Subject;
 import org.exist.storage.BrokerPool;
 import org.exist.storage.DBBroker;
-import org.exist.storage.lock.Lock;
+import org.exist.storage.lock.Lock.LockMode;
 import org.exist.storage.sync.Sync;
 import org.exist.storage.txn.TransactionManager;
 import org.exist.storage.txn.Txn;
 import org.exist.util.MimeType;
-import org.exist.util.function.ConsumerE;
+import com.evolvedbinary.j8fu.function.ConsumerE;
 import org.exist.util.serializer.SAXSerializer;
 import org.exist.xmldb.FullXmldbURI;
 import org.exist.xmldb.XmldbURI;
@@ -356,6 +355,7 @@ public class Configurator {
                         try {
                             method.invoke(instance, value);
                         } catch (final InvocationTargetException e) {
+                            LOG.warn(e);
                             method = null;
                         }
                     }
@@ -679,6 +679,7 @@ public class Configurator {
                     db = BrokerPool.getInstance();
                 } catch (final EXistException e) {
                     //ignore if database is starting-up
+                    LOG.warn("Unable to start lifecycle object: {}", obj.getClass().getName());
                     //TODO: add to BrokerPool static list to activate when ready
                 }
                 
@@ -876,6 +877,7 @@ public class Configurator {
                         final int radix = Integer.valueOf(settingKey.extractValueFromSettings(settings));
                         return Integer.toString((Integer) field.get(instance), radix);
                     } catch (final Exception e) {
+                        LOG.error(e);
                         //TODO UNDERSTAND: ignore, set back to default or throw error?
                     }
                     
@@ -1276,19 +1278,18 @@ public class Configurator {
         final TransactionManager transact = pool.getTransactionManager();
         Txn txn = null;
         LOG.info("Storing configuration " + collection.getURI() + "/" + uri);
-        final Subject currentUser = broker.getCurrentSubject();
         
         try {
             broker.pushSubject(pool.getSecurityManager().getSystemSubject());
             txn = transact.beginTransaction();
-            txn.acquireLock(collection.getLock(), Lock.WRITE_LOCK);
+            txn.acquireLock(collection.getLock(), LockMode.WRITE_LOCK);
             final IndexInfo info = collection.validateXMLResource(txn, broker, uri, data);
             final DocumentImpl doc = info.getDocument();
             doc.getMetadata().setMimeType(MimeType.XML_TYPE.getName());
             doc.getPermissions().setMode(Permission.DEFAULT_SYSTSEM_RESOURCE_PERM);
             fullURI = getFullURI(pool, doc.getURI());
             saving.add(fullURI);
-            collection.store(txn, broker, info, data, false);
+            collection.store(txn, broker, info, data);
             broker.saveCollection(txn, doc.getCollection());
             transact.commit(txn);
             saving.remove(fullURI);

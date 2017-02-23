@@ -79,6 +79,7 @@ import org.exist.stax.ExtendedXMLStreamReader;
 import org.exist.storage.DBBroker;
 import org.exist.storage.UpdateListener;
 import org.exist.storage.lock.Lock;
+import org.exist.storage.lock.Lock.LockMode;
 import org.exist.storage.lock.LockedDocumentMap;
 import org.exist.util.Collations;
 import org.exist.util.Configuration;
@@ -514,6 +515,8 @@ public class XQueryContext implements BinaryValueManager, Context
         if (this.staticOptions != null){
         	ctx.staticOptions = new ArrayList<Option>( this.staticOptions );
         }
+
+        ctx.source = this.source;
         
     }
 
@@ -698,7 +701,7 @@ public class XQueryContext implements BinaryValueManager, Context
 
                 //Forbids rebinding the *same* prefix in a *different* namespace in this *same* context
                 if( !uri.equals( prevURI ) ) {
-                    throw( new XPathException( ErrorCodes.XQST0033, "prefix '"+prefix+"' bind to '"+prevURI+"'" ) );
+                    throw new XPathException(ErrorCodes.XQST0033, "Cannot bind prefix '" + prefix + "' to '" + uri + "' it is already bound to '" + prevURI + "'");
                 }
             }
         }
@@ -1166,7 +1169,7 @@ public class XQueryContext implements BinaryValueManager, Context
                     if( collection != null ) {
                         collection.allDocs( getBroker(), ndocs, true);
                     } else {
-                        doc = getBroker().getXMLResource( staticDocumentPaths[i], Lock.READ_LOCK );
+                        doc = getBroker().getXMLResource( staticDocumentPaths[i], LockMode.READ_LOCK );
 
                         if( doc != null ) {
 
@@ -1175,7 +1178,7 @@ public class XQueryContext implements BinaryValueManager, Context
                                 
                             	ndocs.add( doc );
                             }
-                            doc.getUpdateLock().release( Lock.READ_LOCK );
+                            doc.getUpdateLock().release( LockMode.READ_LOCK );
                         }
                     }
                 }
@@ -2716,7 +2719,7 @@ public class XQueryContext implements BinaryValueManager, Context
                             DocumentImpl sourceDoc = null;
 
                             try {
-                                sourceDoc = getBroker().getXMLResource( locationUri.toCollectionPathURI(), Lock.READ_LOCK );
+                                sourceDoc = getBroker().getXMLResource( locationUri.toCollectionPathURI(), LockMode.READ_LOCK );
 
                                 if(sourceDoc == null) {
                                     throw moduleLoadException("Module location hint URI '" + location + "' does not refer to anything.", location);
@@ -2735,7 +2738,7 @@ public class XQueryContext implements BinaryValueManager, Context
                                 throw moduleLoadException("Permission denied to read module source from location hint URI '" + location + ".", location, e);
                             } finally {
                                 if(sourceDoc != null) {
-                                    sourceDoc.getUpdateLock().release(Lock.READ_LOCK);
+                                    sourceDoc.getUpdateLock().release(LockMode.READ_LOCK);
                                 }
                             }
                         } catch(final URISyntaxException e) {
@@ -3379,7 +3382,8 @@ public class XQueryContext implements BinaryValueManager, Context
             declareNamespace( Namespaces.W3C_XQUERY_XPATH_ERROR_PREFIX, Namespaces.W3C_XQUERY_XPATH_ERROR_NS );
 
             //*not* as standard NS
-            declareNamespace( "exist", Namespaces.EXIST_NS );
+            declareNamespace( Namespaces.EXIST_NS_PREFIX, Namespaces.EXIST_NS );
+            declareNamespace( Namespaces.EXIST_JAVA_BINDING_NS_PREFIX, Namespaces.EXIST_JAVA_BINDING_NS );
             declareNamespace( Namespaces.EXIST_XQUERY_XPATH_ERROR_PREFIX, Namespaces.EXIST_XQUERY_XPATH_ERROR_NS );
 
             //TODO : include "err" namespace ?

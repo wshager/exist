@@ -22,12 +22,6 @@
     
     <description>Sign jarfiles for eXist webstart application</description>
     
-    <!-- Set sign properties -->
-    <property name="keystore.alias" value="exist"/>
-    <property name="keystore.password" value="secret"/>
-    <property name="keystore.file" value="key.store"/>
-    <property name="keystore.validity" value="100000"/>
-    
     <!-- Check wether the keystore already exists -->
     <available file="${keystore.file}" property="keystore.present"/>
     
@@ -109,8 +103,11 @@
     <target name="jnlp-unsign-all"
             description="Unsign all jar files.">
         <taskdef name="unsignjar" 
-                 classname="nl.ow.dilemma.ant.jar.UnsignJarTask" 
-                 classpath="${asocat-exist.jar}"/>
+                 classname="nl.ow.dilemma.ant.jar.UnsignJarTask">
+            <classpath>
+                <pathelement location="${asocat-exist.jar}"/>
+            </classpath>
+        </taskdef>
         <unsignjar>
             <fileset dir=".">
                 <include name="exist*.jar"/>
@@ -139,8 +136,11 @@
         
         <!-- Secondly pack-unpack the jar files (normalize) -->
         <taskdef name="repack" 
-                 classname="nl.ow.dilemma.ant.jar.RepackJarTask" 
-                 classpath="${asocat-exist.jar}"/>
+                 classname="nl.ow.dilemma.ant.jar.RepackJarTask">
+            <classpath>
+                <pathelement location="${asocat-exist.jar}"/>
+            </classpath>
+        </taskdef>
         <repack>
             <fileset dir=".">
                 <include name="exist*.jar"/>
@@ -157,8 +157,11 @@
         
         <!-- Create jar.pack.gz files -->
         <taskdef name="pack" 
-                 classname="nl.ow.dilemma.ant.jar.Pack200Task" 
-                 classpath="${asocat-exist.jar}"/>
+                 classname="nl.ow.dilemma.ant.jar.Pack200Task">
+            <classpath>
+                <pathelement location="${asocat-exist.jar}"/>
+            </classpath>
+        </taskdef>
         <pack>
             <fileset dir=".">
                 <include name="exist*.jar"/>
