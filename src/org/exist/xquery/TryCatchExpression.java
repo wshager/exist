@@ -79,10 +79,8 @@ public class TryCatchExpression extends AbstractExpression {
 
     /**
      * Receive catch-clause data from parser.
-     *
-     * TODO: List<String> must be changed to List<QName>
      */
-    public void addCatchClause(List<String> catchErrorList, List<QName> catchVars, Expression catchExpr) {
+    public void addCatchClause(final List<QName> catchErrorList, final List<QName> catchVars, final Expression catchExpr) {
         catchClauses.add( new CatchClause(catchErrorList, catchVars, catchExpr) );
     }
 
@@ -176,11 +174,7 @@ public class TryCatchExpression extends AbstractExpression {
             // need to be retrieved as variables
             Sequence catchResultSeq = null;
             final LocalVariable mark0 = context.markLocalVariables(false); // DWES: what does this do?
-            
-            // Register new namespace
-            // DWES: 
-            // when declaring "fn:error( fn:QName('http://www.w3.org/2005/xqt-errors', 'err:FOER0000') )"
-            // An Exception is thrown: err:XQST0033 It is a static error if a module contains multiple bindings for the same namespace prefix.
+
             // DWES: should I use popLocalVariables
             context.declareInScopeNamespace(Namespaces.W3C_XQUERY_XPATH_ERROR_PREFIX, Namespaces.W3C_XQUERY_XPATH_ERROR_NS);
             context.declareInScopeNamespace(Namespaces.EXIST_XQUERY_XPATH_ERROR_PREFIX, Namespaces.EXIST_XQUERY_XPATH_ERROR_NS);
@@ -228,10 +222,13 @@ public class TryCatchExpression extends AbstractExpression {
 
                 // If an error hasn't been caught, throw new one
                 if (!errorMatched) {
-                    LOG.error(throwable);
-                    throw new XPathException(throwable);
+                    if (throwable instanceof XPathException) {
+                        throw throwable;
+                    } else {
+                        LOG.error(throwable);
+                        throw new XPathException(throwable);
+                    }
                 }
-
 
             } finally {
                 context.popLocalVariables(mark0, catchResultSeq);
@@ -464,15 +461,9 @@ public class TryCatchExpression extends AbstractExpression {
      * 
      * @return TRUE is qname is in list, or list contains '*', else FALSE,
      */
-    private boolean isErrorInList(final QName error, final List<String> errors) {
-
-        final String qError = error.getStringValue();
-        for (final String lError : errors) {
-            if ("*".equals(lError)) {
-                return true;
-            }
-
-            if (qError.equals(lError)) {
+    private boolean isErrorInList(final QName error, final List<QName> errors) {
+        for (final QName lError : errors) {
+            if (error.matches(lError)) {
                 return true;
             }
         }
@@ -567,39 +558,26 @@ public class TryCatchExpression extends AbstractExpression {
      * Data container
      */
     public static class CatchClause {
+        private final List<QName> catchErrorList;
+        private final List<QName> catchVars;
+        private final Expression catchExpr;
 
-        private List<String> catchErrorList = null;
-        private List<QName> catchVars = null;
-        private Expression catchExpr = null;
-
-        public CatchClause(List<String> catchErrorList, List<QName> catchVars, Expression catchExpr) {
+        public CatchClause(final List<QName> catchErrorList, final List<QName> catchVars, final Expression catchExpr) {
             this.catchErrorList = catchErrorList;
             this.catchVars = catchVars;
             this.catchExpr = catchExpr;
         }
 
-        public List<String> getCatchErrorList() {
+        public List<QName> getCatchErrorList() {
             return catchErrorList;
-        }
-
-        public void setCatchErrorList(List<String> catchErrorList) {
-            this.catchErrorList = catchErrorList;
         }
 
         public Expression getCatchExpr() {
             return catchExpr;
         }
 
-        public void setCatchExpr(Expression catchExpr) {
-            this.catchExpr = catchExpr;
-        }
-
         public List<QName> getCatchVars() {
             return catchVars;
-        }
-
-        public void setCatchVars(List<QName> catchVars) {
-            this.catchVars = catchVars;
         }
     }
 }

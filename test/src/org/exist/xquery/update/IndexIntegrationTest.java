@@ -27,7 +27,7 @@ import org.exist.storage.BrokerPool;
 import org.exist.storage.DBBroker;
 import org.exist.storage.btree.DBException;
 import org.exist.util.DatabaseConfigurationException;
-import org.exist.util.function.ConsumerE;
+import com.evolvedbinary.j8fu.function.ConsumerE;
 import org.exist.xmldb.XmldbURI;
 import org.exist.xquery.XQueryContext;
 import org.junit.Test;
@@ -86,7 +86,6 @@ public class IndexIntegrationTest extends AbstractTestUpdate {
             broker.initIndexModules();
 
         } finally {
-            System.out.println("reset");
             control.resetToStrict();
         }
 

@@ -12,7 +12,13 @@ declare namespace json="http://www.json.org";
 declare variable $arr:SERIALIZE_JSON :=
     <output:serialization-parameters>
         <output:method>json</output:method>
-        <output:indent>false</output:indent>
+        <output:indent>no</output:indent>
+    </output:serialization-parameters>;
+
+declare variable $arr:SERIALIZE_JSON_INDENT :=
+    <output:serialization-parameters>
+        <output:method>json</output:method>
+        <output:indent>yes</output:indent>
     </output:serialization-parameters>;
 
 declare variable $arr:COLLECTION_CONF :=
@@ -53,6 +59,8 @@ declare variable $arr:RESTXQ_TEST :=
              "counters": array { 1 to 10 }
          }
      };';
+
+declare variable $arr:primes := [2, 3, 5, 7, 11, 13, 17, 19];
 
 declare
     %test:setUp
@@ -588,7 +596,7 @@ function arr:apply-param-array() {
 };
 
 declare
-    %test:assertEquals("key")
+    %test:assertEquals("1")
 function arr:apply-param-map() {
     let $fn := function($m as map(*)) {
         $m?*
@@ -743,11 +751,19 @@ function arr:serialize-node() {
 };
 
 declare
-    %test:assertEquals('{ "status" : true }')
+    %test:assertEquals('{"status":true}')
 function arr:serialize-old-json-compat() {
     let $xmlJson := <result><status json:literal="true">true</status></result>
     return
         serialize($xmlJson, $arr:SERIALIZE_JSON)
+};
+
+declare
+    %test:assertEquals('{ "status" : true }')
+function arr:serialize-old-json-compat-indent() {
+    let $xmlJson := <result><status json:literal="true">true</status></result>
+    return
+        serialize($xmlJson, $arr:SERIALIZE_JSON_INDENT)
 };
 
 declare
@@ -881,6 +897,17 @@ function arr:nested-for-each() {
             $_
         })
     })?*?*
+};
+
+declare
+    %test:assertTrue
+function arr:lookupWildcard() {
+    let $expected := (1 to array:size($arr:primes)) ! $arr:primes(.)
+    let $actual := $arr:primes?*
+    return
+        count($actual) eq count($expected)
+        and
+        (every $prime in $actual satisfies $prime = $expected)
 };
 
 (: Requires running server :)
