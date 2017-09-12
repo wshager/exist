@@ -117,7 +117,7 @@ public class IPRangeRealm extends AbstractRealm {
             }
 
             // Construct XQuery
-            final String query = "collection('/db/system/security/iprange/accounts')/account/" +
+            final String query = "collection('/db/system/security/IPRange/accounts')/account/" +
                     "iprange[" + ipToTest + " ge number(start) and " + ipToTest + " le number(end)]/../name";
             final XQueryContext context = new XQueryContext(broker.getBrokerPool(), AccessContext.REST);
 
