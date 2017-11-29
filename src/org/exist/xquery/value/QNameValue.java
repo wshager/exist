@@ -21,13 +21,13 @@
  */
 package org.exist.xquery.value;
 
+import com.ibm.icu.text.Collator;
 import org.exist.dom.QName;
 import org.exist.xquery.Constants.Comparison;
 import org.exist.xquery.ErrorCodes;
 import org.exist.xquery.XPathException;
 import org.exist.xquery.XQueryContext;
 
-import java.text.Collator;
 
 /**
  * Wrapper class around a {@link org.exist.dom.QName} value which extends
@@ -154,9 +154,8 @@ public class QNameValue extends AtomicValue {
                     throw new XPathException(ErrorCodes.XPTY0004, "cannot apply operator to QName");
             }
         } else {
-            throw new XPathException(
-                    "Type error: cannot compare QName to "
-                            + Type.getTypeName(other.getType()));
+            throw new XPathException(ErrorCodes.XPTY0004, "Type error: cannot compare QName to "
+                    + Type.getTypeName(other.getType()));
         }
     }
 

@@ -26,7 +26,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.text.Collator;
 import java.util.*;
 
 import javax.xml.datatype.DatatypeConfigurationException;
@@ -35,6 +34,7 @@ import javax.xml.datatype.Duration;
 import javax.xml.datatype.XMLGregorianCalendar;
 import javax.xml.stream.XMLStreamException;
 
+import com.ibm.icu.text.Collator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.exist.Database;
@@ -66,7 +66,6 @@ import org.exist.source.*;
 import org.exist.stax.ExtendedXMLStreamReader;
 import org.exist.storage.DBBroker;
 import org.exist.storage.UpdateListener;
-import org.exist.storage.lock.Lock;
 import org.exist.storage.lock.Lock.LockMode;
 import org.exist.storage.lock.LockedDocumentMap;
 import org.exist.util.Collations;
@@ -232,7 +231,7 @@ public class XQueryContext implements BinaryValueManager, Context
     protected AnyURIValue                              defaultElementNamespaceSchema = AnyURIValue.EMPTY_URI;
 
     /** The default collation URI. */
-    private String                                     defaultCollation              = Collations.CODEPOINT;
+    private String                                     defaultCollation              = Collations.UNICODE_CODEPOINT_COLLATION_URI;
 
     /** Default Collator. Will be null for the default unicode codepoint collation. */
     private Collator                                   defaultCollator               = null;
@@ -245,6 +244,11 @@ public class XQueryContext implements BinaryValueManager, Context
 
     /** Should empty order greatest or least? */
     private boolean                                    orderEmptyGreatest            = true;
+
+    /**
+     * XQuery 3.0 - declare context item :=
+     */
+    private ContextItemDeclaration                     contextItemDeclaration        = null;
 
     /** The context item set in the query prolog or externally */
     private Sequence                                   contextItem                   = Sequence.EMPTY_SEQUENCE;
@@ -354,7 +358,7 @@ public class XQueryContext implements BinaryValueManager, Context
     // TODO: end of expath repo manager, may change
 
 
-    protected XQueryContext( )
+    public XQueryContext( )
     {
         profiler = new Profiler( null );
     }
@@ -536,6 +540,14 @@ public class XQueryContext implements BinaryValueManager, Context
 
     public void setContextItem(Sequence contextItem) {
         this.contextItem = contextItem;
+    }
+
+    public void setContextItemDeclaration(final ContextItemDeclaration contextItemDeclaration) {
+        this.contextItemDeclaration = contextItemDeclaration;
+    }
+
+    public ContextItemDeclaration getContextItemDeclartion() {
+        return contextItemDeclaration;
     }
 
     public Sequence getContextItem() {
@@ -1016,8 +1028,8 @@ public class XQueryContext implements BinaryValueManager, Context
      */
     public void setDefaultCollation( String uri ) throws XPathException
     {
-        if( uri.equals( Collations.CODEPOINT ) || uri.equals( Collations.CODEPOINT_SHORT ) ) {
-            defaultCollation = Collations.CODEPOINT;
+        if( uri.equals( Collations.UNICODE_CODEPOINT_COLLATION_URI) || uri.equals( Collations.CODEPOINT_SHORT ) ) {
+            defaultCollation = Collations.UNICODE_CODEPOINT_COLLATION_URI;
             defaultCollator  = null;
         }
 
@@ -1031,11 +1043,11 @@ public class XQueryContext implements BinaryValueManager, Context
         }
 
         if( uri.startsWith( Collations.EXIST_COLLATION_URI ) || uri.startsWith( "?" ) || uriTest.isAbsolute() ) {
-            defaultCollator  = Collations.getCollationFromURI( this, uri );
+            defaultCollator  = Collations.getCollationFromURI(uri);
             defaultCollation = uri;
         } else {
             String absUri = getBaseURI().getStringValue() + uri;
-            defaultCollator  = Collations.getCollationFromURI( this, absUri );
+            defaultCollator  = Collations.getCollationFromURI(absUri);
             defaultCollation = absUri;
         }
     }
@@ -1052,7 +1064,7 @@ public class XQueryContext implements BinaryValueManager, Context
         if( uri == null ) {
             return( defaultCollator );
         }
-        return( Collations.getCollationFromURI( this, uri ) );
+        return( Collations.getCollationFromURI( uri ) );
     }
 
 
@@ -1654,7 +1666,8 @@ public class XQueryContext implements BinaryValueManager, Context
         try {
 
             // lookup the class
-            final Class<?> mClass = Class.forName( moduleClass );
+            final ClassLoader existClassLoader = getBroker().getBrokerPool().getClassLoader();
+            final Class<?> mClass = Class.forName(moduleClass, false, existClassLoader);
 
             if( !( Module.class.isAssignableFrom( mClass ) ) ) {
                 LOG.info( "failed to load module. " + moduleClass + " is not an instance of org.exist.xquery.Module." );
